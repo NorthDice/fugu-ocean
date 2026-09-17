@@ -37,3 +37,27 @@ A running log of questions that came up while planning/building this project, wi
 
 **Decision for this project:** use URI path versioning (`/v1/...`). It's the simplest, most visible,
 and cheapest to add now vs. later — worth baking into the router from Module 0 instead of retrofitting.
+
+---
+
+## Q2: What YAML libraries exist in Go, and which one did we pick?
+
+**A:**
+
+1. **`gopkg.in/yaml.v3`** (go-yaml/yaml) — the de facto standard in the Go ecosystem. Simple API
+   modeled after `encoding/json` (`yaml:"field_name"` struct tags). Used under the hood by
+   Kubernetes, Helm, and Docker Compose's own config parsing.
+2. **`gopkg.in/yaml.v2`** — the previous major version of the same library. Still widely used, but
+   `v3` follows the YAML spec more strictly and is the actively maintained branch.
+3. **`github.com/goccy/go-yaml`** — a newer alternative, pure Go, claims better performance and
+   clearer parse errors (with line/column info). Gaining popularity but less battle-tested than go-yaml.
+4. **`sigs.k8s.io/yaml`** — a wrapper that round-trips YAML through JSON (YAML → JSON → struct), so
+   it reuses existing `json:` tags instead of `yaml:` tags. Useful if the same structs are already
+   serialized as JSON elsewhere (e.g. returned from the API).
+5. **`spf13/viper`** — not just a parser but a full config framework: YAML/JSON/TOML/env vars/flags/
+   remote config (etcd/consul), with automatic env-override built in. Powerful, but heavier and
+   relies on reflection under the hood — less visibility into what's actually happening.
+
+**Decision for this project:** `gopkg.in/yaml.v3`. It's the most established option, has a minimal
+API surface, and does exactly one job (parse YAML into structs) — consistent with the earlier
+decision to write env-var overrides by hand instead of pulling in `viper`'s built-in override magic.
