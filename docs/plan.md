@@ -10,7 +10,7 @@ Reference: [docs/mvp.md](./mvp.md) for scope, architecture, and data model.
 
 ---
 
-- [ ] **Module 0 — Project Bootstrap & Infrastructure**
+- [x] **Module 0 — Project Bootstrap & Infrastructure**
   - Repo layout: `cmd/`, `internal/{handler,service,repository}`, `migrations/`, `config/`
   - Config loading from env vars (DB DSN, MinIO creds/endpoint, Meilisearch endpoint, JWT secret)
   - `docker-compose.yml`: postgres, minio (+ `mc` init container to create the bucket), meilisearch
