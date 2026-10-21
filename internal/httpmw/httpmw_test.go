@@ -85,6 +85,35 @@ func TestRecover_CatchesPanicAndReturns500JSON(t *testing.T) {
 	}
 }
 
+func TestRecover_DoesNotCorruptResponseAlreadyStarted(t *testing.T) {
+	logger, buf := newLogger()
+
+	handler := httpmw.Recover(logger)(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		if _, err := w.Write([]byte("partial")); err != nil {
+			t.Fatalf("write response: %v", err)
+		}
+		panic("kaboom after write")
+	}))
+
+	req := httptest.NewRequestWithContext(context.Background(), http.MethodGet, "/boom", nil)
+	rec := httptest.NewRecorder()
+
+	handler.ServeHTTP(rec, req)
+
+	// The handler already committed a 200 with a body; Recover must not try
+	// to also write a 500 JSON error on top of it.
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d (first WriteHeader wins)", rec.Code, http.StatusOK)
+	}
+	if rec.Body.String() != "partial" {
+		t.Fatalf("body = %q, want %q (no error body appended)", rec.Body.String(), "partial")
+	}
+	if !strings.Contains(buf.String(), "kaboom after write") {
+		t.Fatalf("log output = %q, want it to mention the panic value", buf.String())
+	}
+}
+
 func TestRecover_PassesThroughWhenNoPanic(t *testing.T) {
 	logger, _ := newLogger()
 
