@@ -16,7 +16,7 @@ import (
 // NewHandler builds the full API handler: routes wrapped in request logging
 // and panic recovery.
 func NewHandler(logger *log.Logger, healthChecker httpapi.HealthChecker) http.Handler {
-	mux := router.New(httpapi.NewHealthHandler(healthChecker))
+	mux := router.New(httpapi.NewHealthHandler(healthChecker, logger))
 
 	return httpmw.Chain(mux,
 		httpmw.Logging(logger),
