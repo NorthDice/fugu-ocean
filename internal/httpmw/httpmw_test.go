@@ -1,9 +1,11 @@
 package httpmw_test
 
 import (
+	"bufio"
 	"bytes"
 	"context"
 	"log"
+	"net"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -55,6 +57,59 @@ func TestLogging_DefaultsStatusTo200WhenNotSetExplicitly(t *testing.T) {
 
 	if !strings.Contains(buf.String(), "200") {
 		t.Fatalf("log line %q does not contain 200", buf.String())
+	}
+}
+
+func TestLogging_ForwardsFlush(t *testing.T) {
+	logger, _ := newLogger()
+
+	handler := httpmw.Logging(logger)(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if _, ok := w.(http.Flusher); !ok {
+			t.Fatal("ResponseWriter does not implement http.Flusher")
+		}
+		w.(http.Flusher).Flush()
+	}))
+
+	req := httptest.NewRequestWithContext(context.Background(), http.MethodGet, "/stream", nil)
+	rec := httptest.NewRecorder()
+	handler.ServeHTTP(rec, req)
+
+	if !rec.Flushed {
+		t.Fatal("underlying ResponseWriter was not flushed")
+	}
+}
+
+// hijackableRecorder is an httptest.ResponseRecorder that also implements
+// http.Hijacker, since httptest.NewRecorder() alone does not.
+type hijackableRecorder struct {
+	*httptest.ResponseRecorder
+	hijacked bool
+}
+
+func (h *hijackableRecorder) Hijack() (net.Conn, *bufio.ReadWriter, error) {
+	h.hijacked = true
+	return nil, nil, nil
+}
+
+func TestLogging_ForwardsHijack(t *testing.T) {
+	logger, _ := newLogger()
+
+	handler := httpmw.Logging(logger)(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		hj, ok := w.(http.Hijacker)
+		if !ok {
+			t.Fatal("ResponseWriter does not implement http.Hijacker")
+		}
+		if _, _, err := hj.Hijack(); err != nil {
+			t.Fatalf("Hijack() = %v", err)
+		}
+	}))
+
+	req := httptest.NewRequestWithContext(context.Background(), http.MethodGet, "/upgrade", nil)
+	rec := &hijackableRecorder{ResponseRecorder: httptest.NewRecorder()}
+	handler.ServeHTTP(rec, req)
+
+	if !rec.hijacked {
+		t.Fatal("underlying ResponseWriter was not hijacked")
 	}
 }
 
