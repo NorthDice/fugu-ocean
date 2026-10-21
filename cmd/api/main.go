@@ -32,6 +32,12 @@ const (
 func main() {
 	logger := log.New(os.Stdout, "", log.LstdFlags)
 
+	// Some rarely-hit fallback paths (e.g. httpapi.WriteJSON's
+	// encode-failure log) use the log package's default logger rather than
+	// this one; point it at the same sink so nothing ends up in a stream
+	// operators aren't watching.
+	log.SetOutput(logger.Writer())
+
 	if err := run(logger, configPath()); err != nil {
 		logger.Fatal(err)
 	}
