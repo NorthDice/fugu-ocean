@@ -70,7 +70,12 @@ func run(logger *log.Logger, cfgPath string) error {
 		return fmt.Errorf("create minio client: %w", err)
 	}
 
-	meiliPinger := search.NewPinger(cfg.Meilisearch, &http.Client{Timeout: healthCheckTimeout})
+	// No client-level Timeout here: health.Service already bounds each
+	// check with a per-check context deadline (healthCheckTimeout below),
+	// and Pinger.Ping respects it via http.NewRequestWithContext. A second,
+	// separate timeout on the client would just race the context deadline
+	// and make which error surfaces nondeterministic.
+	meiliPinger := search.NewPinger(cfg.Meilisearch, &http.Client{})
 
 	healthService := health.NewService(healthCheckTimeout,
 		health.Check{Name: "postgres", Pinger: pgPool},
