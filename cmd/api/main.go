@@ -24,6 +24,9 @@ const (
 	healthCheckTimeout = 3 * time.Second
 	shutdownTimeout    = 10 * time.Second
 	readHeaderTimeout  = 5 * time.Second
+	readTimeout        = 10 * time.Second
+	writeTimeout       = 10 * time.Second
+	idleTimeout        = 120 * time.Second
 )
 
 func main() {
@@ -75,6 +78,9 @@ func run(logger *log.Logger, cfgPath string) error {
 		Addr:              ":" + cfg.Server.Port,
 		Handler:           handler,
 		ReadHeaderTimeout: readHeaderTimeout,
+		ReadTimeout:       readTimeout,
+		WriteTimeout:      writeTimeout,
+		IdleTimeout:       idleTimeout,
 	}
 
 	return serve(ctx, logger, srv)
